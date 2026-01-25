@@ -16,17 +16,42 @@ import great_expectations as gx
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Load Awesome ChatGPT Prompts dataset with streaming
+# Load Awesome ChatGPT Prompts dataset
+print("LOADING DATASET")
 dataset = load_dataset("fka/awesome-chatgpt-prompts", trust_remote_code = True)
 df = dataset['train'].to_pandas()
 
+print(f"Dataset loaded successfully.")
+print(f"Shape: {df.shape[0]} rows, {df.shape[1]} columns")
+print(f"Columns: {list(df.columns)}")
+
+print("\nFirst sample:")
+print(f"Act: {df.iloc[0]['act']}")
+print(f"Prompt: {df.iloc[0]['prompt'][:100]}...")
+
 # Data Cleaning
+print("DATA CLEANING")
 df_clean = df.copy()
 
+print("\nChecking for missing values:")
 missing_count = df_clean.isnull().sum()
 for col, count in missing_count.items():
     if count > 0:
         print(f" - '{col}': {count} missing values (will impute)")
+    else:
+        print(f" '{col}': No missing values")
+
+# Remove duplicates based on prompt
+initial_rows = len(df_clean)
+df_clean = df_clean.drop_duplicates(subset=['prompt'], keep='first')
+duplicates_removed = initial_rows - len(df_clean)
+print(f" - Removed {duplicates_removed} duplicate prompts")
+
+# Filter out prompts that are too long (>1000 characters) or too short (<10 characters)
+df_clean = df_clean[(df_clean['prompt'].str.len() >= 10) & (df_clean['prompt'].str.len() <= 1000)]
+rows_after_filter = len(df_clean)
+print(f" - Removed {initial_rows - duplicates_removed - rows_after_filter} prompts outside length range (10-1000 chars)")
+print(f" - Final dataset size: {len(df_clean)} rows\n")
 
 df_clean['prompt_clean'] = df_clean['prompt'].str.lower()
 df_clean['act_clean'] = df_clean['act'].str.lower()
