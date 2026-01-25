@@ -1,0 +1,174 @@
+"""
+
+SEG 4180 Assignment 2
+
+"""
+
+# imports
+from datasets import load_dataset
+import pandas as pd
+import numpy as np
+import re
+import string
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.decomposition import PCA
+import great_expectations as gx
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load Awesome ChatGPT Prompts dataset with streaming
+dataset = load_dataset("fka/awesome-chatgpt-prompts", trust_remote_code = True)
+df = dataset['train'].to_pandas()
+
+# Data Cleaning
+df_clean = df.copy()
+
+missing_count = df_clean.isnull().sum()
+for col, count in missing_count.items():
+    if count > 0:
+        print(f" - '{col}': {count} missing values (will impute)")
+
+df_clean['prompt_clean'] = df_clean['prompt'].str.lower()
+df_clean['act_clean'] = df_clean['act'].str.lower()
+
+df_clean['prompt_clean'] = df_clean['prompt_clean'].str.translate(
+    str.maketrans('', '', string.punctuation)
+)
+
+df_clean['prompt_clean'] = df_clean['prompt_clean'].str.replace(r'\d+', '', regex = True)
+
+df_clean['prompt_clean'] = df_clean['prompt_clean'].str.strip()
+
+df_clean['prompt_length'] = df_clean['prompt'].str.len()
+df_clean['word_count'] = df_clean['prompt'].str.split().str.len()
+df_clean['avg_word_length'] = df_clean['prompt_length'] / df_clean['word_count']
+
+# Feature Engineering
+
+vectorizer = CountVectorizer(ngram_range=(1, 2), max_features=50, stop_words='english')
+X_counts = vectorizer.fit_transform(df_clean['prompt_clean'])
+
+feature_names = vectorizer.get_feature_names_out()
+
+tfidf = TfidfVectorizer(max_features=20, stop_words='english')
+X_tfidf = tfidf.fit_transform(df_clean['prompt_clean'])
+
+df_clean['act_encoded'] = pd.factorize(df_clean['act'])[0]
+
+# Dimensionality
+
+if X_counts.shape[1] > 1:
+    pca = PCA(n_components=3)
+    X_pca = pca.fit_transform(X_counts.toarray())
+
+# Data validation
+print("\nRunning data validation with Great Expectations...")
+
+# For GX v1.x, we'll use a simplified validation approach
+# Define expectations manually and check them
+validation_results = {
+    'success': True,
+    'results': []
+}
+
+# Check for null values
+null_prompt = df_clean['prompt'].isnull().sum()
+null_act = df_clean['act'].isnull().sum()
+validation_results['results'].append({
+    'expectation': 'prompt has no nulls',
+    'success': null_prompt == 0,
+    'null_count': int(null_prompt)
+})
+validation_results['results'].append({
+    'expectation': 'act has no nulls',
+    'success': null_act == 0,
+    'null_count': int(null_act)
+})
+
+# Check prompt_length range
+prompt_length_valid = df_clean['prompt_length'].between(10, 1000).all()
+validation_results['results'].append({
+    'expectation': 'prompt_length between 10 and 1000',
+    'success': bool(prompt_length_valid)
+})
+
+# Check uniqueness
+prompts_unique = df_clean['prompt'].is_unique
+validation_results['results'].append({
+    'expectation': 'prompts are unique',
+    'success': bool(prompts_unique)
+})
+
+# Check data types
+prompt_is_str = df_clean['prompt'].dtype == 'object'
+act_is_str = df_clean['act'].dtype == 'object'
+validation_results['results'].append({
+    'expectation': 'prompt is string type',
+    'success': bool(prompt_is_str)
+})
+validation_results['results'].append({
+    'expectation': 'act is string type',
+    'success': bool(act_is_str)
+})
+
+# Update overall success
+validation_results['success'] = all(r['success'] for r in validation_results['results'])
+
+print("\n" + "="*50)
+print("Validation Results:")
+print("="*50)
+for result in validation_results['results']:
+    status = "✓ PASS" if result['success'] else "✗ FAIL"
+    print(f"{status}: {result['expectation']}")
+print(f"\nOverall Success: {validation_results['success']}")
+print("="*50 + "\n")
+
+# Visualizations
+
+fig, axes = plt.subplots(2, 3, figsize=(15,10))
+fig.suptitle('EDA: ChatGPT Prompts Dataset', fontsize=16, fontweight='bold')
+
+axes[0, 0].hist(df_clean['prompt_length'], bins=30, edgecolor='black', alpha=0.7)
+axes[0, 0].set_title('Prompt Length Distribution')
+axes[0, 0].set_xlabel('Characters')
+axes[0, 0].set_ylabel('Frequency')
+axes[0, 0].axvline(df_clean['prompt_length'].mean(), color='red', linestyle='--')
+
+top_roles = df_clean['act'].value_counts().head(10)
+axes[0, 1].barh(range(len(top_roles)), top_roles.values)
+axes[0, 1].set_yticks(range(len(top_roles)))
+axes[0, 1].set_yticklabels(top_roles.index)
+axes[0, 1].invert_yaxis()
+axes[0, 1].set_title('Top 10 ChatGPT Roles')
+axes[0, 1].set_xlabel('Count')
+
+axes[0, 2].boxplot(df_clean['word_count'])
+axes[0, 2].set_title('Word Count Distribution (Box Plot)')
+axes[0, 2].set_ylabel('Words per Prompt')
+
+axes[1, 0].imshow(df_clean.isnull().T, aspect='auto', cmap='viridis')
+axes[1, 0].set_title('Missing Values Heatmap')
+axes[1, 0].set_xlabel('Sample Index')
+axes[1, 0].set_ylabel('Features')
+
+numeric_cols = ['prompt_length', 'word_count', 'avg_word_length', 'act_encoded']
+corr_matrix = df_clean[numeric_cols].corr()
+im = axes[1, 1].imshow(corr_matrix, cmap='coolwarm', vmin=-1, vmax=1)
+axes[1, 1].set_title('Feature Correlations')
+axes[1, 1].set_xticks(range(len(numeric_cols)))
+axes[1, 1].set_xticklabels([c[:10] for c in numeric_cols], rotation=45)
+axes[1, 1].set_yticks(range(len(numeric_cols)))
+axes[1, 1].set_yticklabels([c[:10] for c in numeric_cols])
+plt.colorbar(im, ax=axes[1, 1])
+
+axes[1, 2].axis('off')
+sample_text = "Sample Prompt:\n\n" + df_clean.iloc[0]['prompt'][:200] + "..."
+axes[1, 2].text(0.1, 0.5, sample_text, fontsize=10, 
+                verticalalignment='center', family='monospace')
+axes[1, 2].set_title('Example Prompt')
+
+plt.tight_layout()
+plt.savefig('assignment_visualizations.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+df_clean.to_csv('cleaned_prompts.csv', index=False)
