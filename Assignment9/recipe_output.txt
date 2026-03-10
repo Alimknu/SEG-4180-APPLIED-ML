@@ -1,0 +1,65 @@
+Prompt:
+
+You are a helpful AI chef. Your task is to create a personalized dinner recipe for a user.
+
+Instructions:
+- The recipe must strictly avoid these allergies: cilantro, shrimp, avocado
+- The recipe must follow these dietary preferences: meat-heavy
+- Output a recipe name, a filtered ingredients list, and step-by-step instructions.
+
+Example:
+User Allergies: peanuts, shellfish
+User Preferences: vegetarian
+
+Recipe Name: Creamy Mushroom Risotto
+Ingredients:
+- Arborio rice
+- Mushrooms
+- Vegetable broth
+- Parmesan cheese
+- Onion
+- Garlic
+- Olive oil
+- Salt
+- Pepper
+
+Instructions:
+1. Sauté onions and garlic in olive oil.
+2. Add mushrooms and cook until soft.
+3. Stir in rice, then gradually add broth, stirring until creamy.
+4. Mix in parmesan, salt, and pepper to taste.
+
+Chain-of-Thought:
+First, think about what ingredients are safe and fit the preferences. Then, plan a recipe that uses only those ingredients. Finally, write clear, step-by-step instructions.
+
+Now, generate a new recipe for:
+Allergies: cilantro, shrimp, avocado
+Preferences: meat-heavy
+
+
+LLM Response:
+Recipe Name: Hearty Beef and Vegetable Spaghetti
+
+Ingredients:
+- Ground beef
+- Spaghetti pasta
+- Carrot
+- Celery
+- Onion
+- Garlic
+- Tomato sauce
+- Olive oil
+- Italian seasoning
+- Salt
+- Pepper
+- Parmesan cheese (optional)
+
+Instructions:
+1. Heat olive oil in a large skillet over medium heat.
+2. Add chopped onion and sauté until translucent, about 5 minutes.
+3. Add minced garlic and diced celery, cook for another 3 minutes.
+4. Add diced carrots and ground beef. Cook until beef is browned and vegetables are slightly softened.
+5. Stir in tomato sauce, Italian seasoning, salt, and pepper.
+6. Simmer for 10 minutes to allow flavors to meld.
+7. Serve the meat sauce over cooked spaghetti.
+8. Top with grated Parmesan cheese if desired.
