@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: house-segmentation-api
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - PORT=5000
+      - MODEL_PATH=/app/models/segmentation_model.keras
+      - DATASET_PATH=/app/data/satellite_dataset
+      - EPOCHS=50
+      - BATCH_SIZE=32
+      - LEARNING_RATE=0.001
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - ml-network
+    labels:
+      - "com.example.service=house-segmentation"
+      - "com.example.version=1.0"
+
+  # Optional: Add Redis for caching in future
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: segmentation-redis
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - ml-network
+
+networks:
+  ml-network:
+    driver: bridge
+
+volumes:
+  models:
+  data:
+  logs:
