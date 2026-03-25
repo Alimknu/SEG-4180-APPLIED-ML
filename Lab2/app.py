@@ -72,14 +72,17 @@ def predict():
             return jsonify({'error': 'Model not loaded'}), 503
         
         image_file = request.files['image']
-        start = time.time()
         
+        start = time.time()
         image_bytes = image_file.read()
         image_array = preprocess_image(image_bytes)
+        preprocess_time = (time.time() - start) * 1000
+        
+        start = time.time()
         mask_pred = model.predict(image_array, verbose=0)
         mask_image = postprocess_mask(mask_pred)
-        
         inference_time = (time.time() - start) * 1000
+        
         mask_array = np.array(mask_image) / 255.0
         building_percentage = float(np.mean(mask_array) * 100)
         
@@ -113,6 +116,7 @@ def predict_batch():
         if model is None:
             return jsonify({'error': 'Model not loaded'}), 503
         
+        data = request.get_json() or {}
         num_images = data.get('count', 0)
         
         if 'images' in request.files:

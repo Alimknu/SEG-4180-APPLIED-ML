@@ -45,8 +45,7 @@ class TestHealthEndpoint:
         assert 'status' in data or 'error' in data
 
 
-class TestPredictEndpoint:""
-    
+class TestPredictEndpoint:
     def test_predict_no_image_returns_400(self, client):
         response = client.post('/predict')
         assert response.status_code == 400
